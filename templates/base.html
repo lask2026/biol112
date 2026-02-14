@@ -1,0 +1,407 @@
+<!-- templates/base.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{% block title %}BIOL 112{% endblock %}</title>
+
+  <style>
+    :root{
+      --bg:#f6f8ff;
+      --card:#ffffff;
+      --text:#0f172a;
+      --muted:#475569;
+      --border:#e6eaf2;
+
+      --blue:#2f63d7;
+      --blue2:#244fb8;
+
+      --good:#16a34a;
+      --goodBg:#dcfce7;
+
+      --bad:#dc2626;
+      --badBg:#fee2e2;
+
+      --shadow: 0 12px 34px rgba(15, 23, 42, 0.10);
+      --shadow2: 0 8px 20px rgba(15, 23, 42, 0.08);
+      --r:20px;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background: radial-gradient(1200px 600px at 20% 0%, rgba(47,99,215,0.14), transparent 55%),
+                  radial-gradient(900px 500px at 90% 10%, rgba(36,79,184,0.12), transparent 60%),
+                  var(--bg);
+      color:var(--text);
+    }
+
+    a{color:inherit}
+
+    .topbar{
+      position:sticky;
+      top:0;
+      z-index:50;
+      background: rgba(255,255,255,0.80);
+      backdrop-filter: blur(10px);
+      border-bottom:1px solid rgba(230,234,242,0.9);
+    }
+
+    .wrap{max-width:1180px;margin:0 auto;padding:18px 22px;}
+    .toprow{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width: 220px;
+    }
+
+    .logo{
+      width:34px;height:34px;border-radius:12px;
+      background: linear-gradient(180deg, var(--blue), var(--blue2));
+      box-shadow: 0 10px 24px rgba(47,99,215,0.28);
+    }
+
+    .brand a{
+      text-decoration:none;
+      font-weight:900;
+      letter-spacing:0.4px;
+    }
+    .brand small{
+      display:block;
+      margin-top:2px;
+      color:var(--muted);
+      font-weight:600;
+      font-size:12px;
+      letter-spacing:0.3px;
+    }
+
+    .nav{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:flex-end;
+      flex: 1;
+    }
+
+    .nav a{
+      text-decoration:none;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(230,234,242,1);
+      background:#fff;
+      color:var(--text);
+      font-weight:700;
+      font-size:14px;
+      transition: transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
+      box-shadow: 0 0 0 rgba(0,0,0,0);
+    }
+    .nav a:hover{
+      transform: translateY(-1px);
+      box-shadow: var(--shadow2);
+      border-color: rgba(47,99,215,0.22);
+    }
+    .nav a.active{
+      background: linear-gradient(180deg, var(--blue), var(--blue2));
+      border-color: transparent;
+      color:#fff;
+      box-shadow: 0 12px 28px rgba(47,99,215,0.26);
+    }
+
+    .content{padding:18px 0 42px 0;}
+
+    .pageTitle{
+      text-align:center;
+      font-weight:950;
+      letter-spacing:1.6px;
+      margin:8px 0 18px 0;
+    }
+    .subtitle{
+      text-align:center;
+      color:var(--muted);
+      font-weight:600;
+      margin:0 0 22px 0;
+    }
+
+    /* Generic card */
+    .card{
+      background:var(--card);
+      border:1px solid rgba(230,234,242,1);
+      border-radius: var(--r);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .cardPad{padding:18px 18px;}
+
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      padding:10px 14px;
+      border-radius:14px;
+      border:1px solid rgba(230,234,242,1);
+      background:#fff;
+      font-weight:800;
+      font-size:14px;
+      text-decoration:none;
+      cursor:pointer;
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+    }
+    .btn:hover{
+      transform:translateY(-1px);
+      box-shadow: var(--shadow2);
+      border-color: rgba(47,99,215,0.22);
+    }
+    .btnPrimary{
+      background: linear-gradient(180deg, var(--blue), var(--blue2));
+      border-color: transparent;
+      color:#fff;
+      box-shadow: 0 12px 28px rgba(47,99,215,0.26);
+    }
+    .btnPrimary:hover{border-color: transparent;}
+    .btnDanger{
+      border-color: rgba(220,38,38,0.35);
+      color: var(--bad);
+      background: rgba(220,38,38,0.06);
+    }
+    .btnSmall{padding:8px 12px; border-radius:12px; font-size:13px;}
+
+    .row{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;}
+    .muted{color:var(--muted);}
+    .divider{height:1px;background:rgba(230,234,242,1);}
+
+    select, input[type="text"]{
+      padding:10px 12px;
+      border:1px solid rgba(230,234,242,1);
+      border-radius:14px;
+      background:#fff;
+      font-weight:700;
+    }
+
+    /* Exam blocks */
+    .examGrid{
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap:22px;
+      align-items:start;
+    }
+    .examCard{
+      border-radius: 30px;
+      overflow:hidden;
+      background:#fff;
+      box-shadow: var(--shadow);
+      border:1px solid rgba(230,234,242,1);
+    }
+    .examHeader{
+      padding:18px 18px;
+      background: linear-gradient(180deg, var(--blue), var(--blue2));
+      color:#fff;
+      font-weight:950;
+      text-align:center;
+      letter-spacing:0.8px;
+      font-size:18px;
+    }
+    .chapterList{padding:10px 14px 16px 14px;}
+    .chapterLink{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      text-decoration:none;
+      margin:10px 6px;
+      padding:12px 14px;
+      border-radius:16px;
+      background: rgba(47, 99, 215, 0.10);
+      border:1px solid rgba(47, 99, 215, 0.18);
+      transition: transform .12s ease, background .12s ease, border-color .12s ease, box-shadow .12s ease;
+    }
+    .chapterLink:hover{
+      transform: translateY(-1px);
+      background: rgba(47, 99, 215, 0.16);
+      border-color: rgba(47, 99, 215, 0.28);
+      box-shadow: var(--shadow2);
+    }
+    .chapterName{font-weight:850;}
+    .chapterChevron{opacity:.55; font-weight:900;}
+
+    .hubTitle{
+      font-weight:950;
+      margin:0;
+      font-size:22px;
+      letter-spacing:0.2px;
+    }
+    .hubSub{
+      margin:4px 0 0 0;
+      color:var(--muted);
+      font-weight:650;
+      font-size:13px;
+    }
+
+    /* Chips */
+    .chip{
+      display:inline-block;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(230,234,242,1);
+      background:#fff;
+      font-size:12px;
+      font-weight:800;
+      color:var(--muted);
+    }
+
+    /* Quiz options */
+    .opt{
+      border:1px solid rgba(230,234,242,1);
+      border-radius:16px;
+      padding:12px 14px;
+      margin:10px 0;
+      background:#fff;
+    }
+    .opt.clickable{
+      display:block;
+      cursor:pointer;
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+    }
+    .opt.clickable:hover{
+      transform: translateY(-1px);
+      box-shadow: var(--shadow2);
+      border-color: rgba(47,99,215,0.22);
+    }
+    .opt.correct{
+      border-color: rgba(22,163,74,0.45);
+      background: var(--goodBg);
+    }
+    .opt.wrong{
+      border-color: rgba(220,38,38,0.45);
+      background: var(--badBg);
+    }
+    .tag{
+      font-size:12px;
+      margin-left:8px;
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid rgba(0,0,0,0.08);
+      background:#fff;
+      font-weight:800;
+    }
+    .tag.correct{ color:#166534; }
+    .tag.wrong{ color:#991b1b; }
+
+    /* Flashcards (GRID cards show BOTH sides always) */
+    .flashGrid{
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap:16px;
+    }
+    .flashCard{
+      border-radius: var(--r);
+      border: 1px solid rgba(230,234,242,1);
+      background:#fff;
+      box-shadow: var(--shadow2);
+      overflow:hidden;
+      cursor:default;
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+    }
+    .flashCard:hover{
+      transform: translateY(-1px);
+      border-color: rgba(47,99,215,0.22);
+      box-shadow: var(--shadow);
+    }
+    .flashTop{padding:14px 14px; font-weight:850;}
+    .flashBottom{
+      padding:14px 14px;
+      color:var(--muted);
+      border-top: 1px solid rgba(230,234,242,1);
+      display:block; /* always visible */
+    }
+
+    /* Datatable */
+    .tableWrap{overflow:auto;}
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      font-size:14px;
+    }
+    th, td{
+      padding:10px 12px;
+      border-bottom:1px solid rgba(230,234,242,1);
+      vertical-align:top;
+      white-space:nowrap;
+    }
+    th{
+      position:sticky;
+      top:0;
+      background:#fff;
+      z-index:1;
+      font-weight:900;
+      border-bottom:1px solid rgba(230,234,242,1);
+    }
+    tr:hover td{background: rgba(47,99,215,0.04);}
+    .wrapText{white-space:normal; min-width:220px;}
+
+    /* Resources */
+    .prose{
+      line-height:1.65;
+      color: var(--text);
+      font-size:15px;
+    }
+    .prose pre{
+      padding:12px 14px;
+      background: rgba(15,23,42,0.04);
+      border:1px solid rgba(230,234,242,1);
+      border-radius:14px;
+      overflow:auto;
+    }
+    .prose code{
+      padding:2px 6px;
+      border-radius:8px;
+      background: rgba(15,23,42,0.04);
+      border:1px solid rgba(230,234,242,1);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="wrap">
+      <div class="toprow">
+        <div class="brand">
+          <div class="logo"></div>
+          <div>
+            <a href="{{ url_for('chapters_home') }}">BIOL 112</a>
+            <small class="muted">
+              {% if chapter %}
+                {{ chapter.exam_title }} • {{ chapter.id_raw }}
+              {% else %}
+                Study hub
+              {% endif %}
+            </small>
+          </div>
+        </div>
+
+        <div class="nav">
+          {% if chapter %}
+            <a href="{{ url_for('chapter_hub', chapter_key=chapter.key) }}" class="{{ 'active' if active=='hub' else '' }}">Chapter</a>
+            <a href="{{ url_for('chapter_quiz', chapter_key=chapter.key) }}" class="{{ 'active' if active=='quiz' else '' }}">Quiz</a>
+            <a href="{{ url_for('chapter_flashcards', chapter_key=chapter.key) }}" class="{{ 'active' if active=='flashcards' else '' }}">Flashcards</a>
+            <a href="{{ url_for('chapter_datatable', chapter_key=chapter.key) }}" class="{{ 'active' if active=='datatable' else '' }}">Datatable</a>
+            <a href="{{ url_for('chapter_resources', chapter_key=chapter.key) }}" class="{{ 'active' if active=='resources' else '' }}">Resources</a>
+          {% else %}
+            <a href="{{ url_for('chapters_home') }}" class="active">Home</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap content">
+    {% block content %}{% endblock %}
+  </div>
+
+</body>
+</html>

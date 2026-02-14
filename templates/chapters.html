@@ -1,0 +1,43 @@
+<!-- templates/chapters.html -->
+{% extends "base.html" %}
+{% block title %}BIOL 112{% endblock %}
+
+{% block content %}
+  <h1 class="pageTitle">BIOL 112</h1>
+  <p class="subtitle">Choose an exam block, then pick a chapter.</p>
+
+  {% if not exams %}
+    <div class="card">
+      <div class="cardPad">
+        <b>No exams found.</b>
+        <div class="muted">Check that chapters.csv exists and is valid.</div>
+      </div>
+    </div>
+  {% else %}
+    <div class="examGrid">
+      {% for exam in exams %}
+        <div class="examCard">
+<div class="examHeader">
+  {% if ' Test ' in exam.title %}
+    {% set parts = exam.title.split(' Test ', 1) %}
+    <div>{{ parts[0] }}</div>
+    <div style="margin-top:6px; font-weight:700; font-size:13px; opacity:0.92;">
+      Test {{ parts[1] }}
+    </div>
+  {% else %}
+    <div>{{ exam.title }}</div>
+  {% endif %}
+</div>
+          <div class="chapterList">
+            {% for ch in exam.chapters %}
+              <a class="chapterLink" href="{{ url_for('chapter_hub', chapter_key=ch.key) }}">
+                <span class="chapterName">{{ ch.title }}</span>
+                <span class="chapterChevron">›</span>
+              </a>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endblock %}

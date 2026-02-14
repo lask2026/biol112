@@ -1,0 +1,29 @@
+<!-- templates/results.html -->
+{% extends "base.html" %}
+{% block title %}{{ chapter.title }} • Results{% endblock %}
+
+{% block content %}
+  <div class="card">
+    <div class="cardPad">
+      <div class="row">
+        <div>
+          <h2 class="hubTitle">Results</h2>
+          <p class="hubSub">{{ chapter.title }}</p>
+        </div>
+        <a class="btn btnPrimary" href="{{ url_for('chapter_quiz', chapter_key=chapter.key) }}">Retry</a>
+      </div>
+
+      <div style="height:14px"></div>
+      <div class="divider"></div>
+      <div style="height:14px"></div>
+
+      <div class="row">
+        <div class="chip">Score: {{ score }} / {{ total }}</div>
+        <div class="chip">Percentage: {{ "%.1f"|format(percentage) }}%</div>
+      </div>
+
+      <div style="height:14px"></div>
+      <a class="btn btnDanger" href="{{ url_for('chapter_reset', chapter_key=chapter.key) }}">Reset quiz state</a>
+    </div>
+  </div>
+{% endblock %}

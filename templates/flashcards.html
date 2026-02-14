@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+{% block title %}{{ chapter.title }} • Flashcards{% endblock %}
+
+{% block content %}
+  <div class="row" style="margin-bottom:14px;">
+    <div>
+      <h2 class="hubTitle">Flashcards</h2>
+      <p class="hubSub">{{ chapter.title }}</p>
+      <div class="muted" style="font-weight:650; font-size:13px;">
+        Grid: click a card to reveal answer • Deck: click to flip • ←/→ navigate • Space flips
+      </div>
+    </div>
+
+    <div class="row" style="gap:10px;">
+      <span class="chip">{{ cards|length }} cards</span>
+      <button class="btn btnSmall" id="gridBtn" type="button">Grid</button>
+      <button class="btn btnSmall btnPrimary" id="deckBtn" type="button">Deck</button>
+    </div>
+  </div>
+
+  {% if not cards %}
+    <div class="card">
+      <div class="cardPad">
+        <b>No flashcards found.</b>
+        <div class="muted">Add flashcards CSV with columns Front, Back (or Question, Answer).</div>
+      </div>
+    </div>
+  {% else %}
+
+    <!-- GRID VIEW (front only; back reveals on click) -->
+    <div id="gridView">
+      <div class="flashGrid">
+        {% for c in cards %}
+          <div class="flashCard gridCard" role="button" tabindex="0" aria-label="Flashcard (click to reveal answer)">
+            <div class="flashTop">
+              <div class="chip" style="display:inline-block; margin-bottom:10px;">Front</div>
+              <div style="font-weight:800;">{{ c.front }}</div>
+              <div class="muted" style="margin-top:10px; font-weight:650; font-size:13px;">
+                Click to show answer
+              </div>
+            </div>
+
+            <!-- keep existing flashBottom styling, but we'll hide with CSS in this page -->
+            <div class="flashBottom gridBack">
+              <div class="chip" style="display:inline-block; margin-bottom:10px;">Back</div>
+              <div style="font-weight:650;">{{ c.back }}</div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- DECK VIEW (one-by-one + flip animation) -->
+    <div id="deckView" style="display:none;">
+      <div class="card" style="padding:18px;">
+        <div class="row" style="margin-bottom:12px;">
+          <span class="chip" id="counter">1 / {{ cards|length }}</span>
+
+          <div class="row" style="gap:10px;">
+            <button class="btn btnSmall" id="shuffleBtn" type="button">Shuffle</button>
+            <button class="btn btnSmall btnDanger" id="resetBtn" type="button">Reset</button>
+          </div>
+        </div>
+
+        <div class="divider" style="margin:10px 0 16px 0;"></div>
+
+        <div class="deckWrap">
+          <div class="deckCard" id="deckCard" tabindex="0" aria-label="Flashcard (click to flip)">
+            <div class="deckInner" id="deckInner">
+              <div class="deckFace deckFront">
+                <div class="deckLabel">Front</div>
+                <div class="deckText" id="frontText"></div>
+              </div>
+              <div class="deckFace deckBack">
+                <div class="deckLabel">Back</div>
+                <div class="deckText" id="backText"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="height:16px;"></div>
+
+        <div class="row" style="justify-content:center; gap:12px;">
+          <button class="btn" id="prevBtn" type="button">← Prev</button>
+          <button class="btn btnPrimary" id="flipBtn" type="button">Flip</button>
+          <button class="btn" id="nextBtn" type="button">Next →</button>
+        </div>
+
+        <div style="height:10px;"></div>
+        <div class="muted" style="text-align:center; font-weight:650; font-size:13px;">
+          Tip: Use ←/→ for navigation, Space to flip.
+        </div>
+      </div>
+    </div>
+
+    <!-- Page-scoped styles so you don't have to keep editing base.html -->
+    <style>
+      /* GRID: hide back until revealed */
+      .gridBack{
+        display:none;               /* hidden initially */
+      }
+      .gridCard.revealed .gridBack{
+        display:block;
+      }
+      .gridCard{
+        cursor:pointer;
+      }
+
+      /* optional: small “reveal” animation */
+      .gridCard.revealed .gridBack{
+        animation: revealIn 160ms ease-out;
+      }
+      @keyframes revealIn{
+        from{ transform: translateY(-4px); opacity: 0.0; }
+        to{ transform: translateY(0px); opacity: 1.0; }
+      }
+
+      /* Deck view styles */
+      .deckWrap{
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        padding: 8px 6px 2px 6px;
+      }
+      .deckCard{
+        width:min(720px, 100%);
+        height: 320px;
+        perspective: 1200px;
+        border-radius: 22px;
+        outline: none;
+      }
+      .deckInner{
+        position: relative;
+        width:100%;
+        height:100%;
+        border-radius: 22px;
+        transform-style: preserve-3d;
+        transition: transform 420ms cubic-bezier(.2,.8,.2,1);
+        box-shadow: var(--shadow);
+      }
+      .deckInner.flipped{ transform: rotateY(180deg); }
+
+      .deckFace{
+        position:absolute;
+        inset:0;
+        border-radius: 22px;
+        padding: 18px 18px;
+        background:#fff;
+        border: 1px solid rgba(230,234,242,1);
+        backface-visibility: hidden;
+
+        /* center content */
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        justify-content:center;
+        text-align:center;
+      }
+      .deckBack{ transform: rotateY(180deg); }
+
+      .deckLabel{
+        display:inline-flex;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(230,234,242,1);
+        background: rgba(15,23,42,0.03);
+        font-weight: 800;
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 14px;
+      }
+
+      /* reduce bold + keep readable */
+      .deckText{
+        font-weight: 650;        /* was 900 */
+        font-size: 18px;
+        line-height: 1.5;
+        max-width: 640px;
+        overflow:auto;
+        padding: 0 6px;
+      }
+    </style>
+
+    <script>
+      // ------- Data from server -------
+      const CARDS = {{ cards|tojson }};
+
+      // ------- View toggle -------
+      const gridView = document.getElementById("gridView");
+      const deckView = document.getElementById("deckView");
+      const gridBtn  = document.getElementById("gridBtn");
+      const deckBtn  = document.getElementById("deckBtn");
+
+      function setMode(mode){
+        if(mode === "grid"){
+          gridView.style.display = "";
+          deckView.style.display = "none";
+          gridBtn.classList.add("btnPrimary");
+          deckBtn.classList.remove("btnPrimary");
+          localStorage.setItem("flashMode", "grid");
+        }else{
+          gridView.style.display = "none";
+          deckView.style.display = "";
+          deckBtn.classList.add("btnPrimary");
+          gridBtn.classList.remove("btnPrimary");
+          localStorage.setItem("flashMode", "deck");
+          renderCard();
+        }
+      }
+      gridBtn.addEventListener("click", () => setMode("grid"));
+      deckBtn.addEventListener("click", () => setMode("deck"));
+
+      // ------- GRID: click to reveal/hide back -------
+      document.addEventListener("click", (e) => {
+        const card = e.target.closest(".gridCard");
+        if(!card) return;
+        card.classList.toggle("revealed");
+      });
+
+      // keyboard toggle for focused grid cards (Enter/Space)
+      document.addEventListener("keydown", (e) => {
+        const isGrid = gridView.style.display !== "none";
+        if(!isGrid) return;
+        const active = document.activeElement;
+        if(active && active.classList && active.classList.contains("gridCard")){
+          if(e.key === "Enter" || e.key === " " || e.key === "Spacebar"){
+            e.preventDefault();
+            active.classList.toggle("revealed");
+          }
+        }
+      });
+
+      // ------- Deck logic -------
+      const counter  = document.getElementById("counter");
+      const frontTxt = document.getElementById("frontText");
+      const backTxt  = document.getElementById("backText");
+      const prevBtn  = document.getElementById("prevBtn");
+      const nextBtn  = document.getElementById("nextBtn");
+      const flipBtn  = document.getElementById("flipBtn");
+      const shuffleBtn = document.getElementById("shuffleBtn");
+      const resetBtn = document.getElementById("resetBtn");
+      const deckInner = document.getElementById("deckInner");
+      const deckCard = document.getElementById("deckCard");
+
+      let order = [...Array(CARDS.length).keys()];
+      let idx = 0;
+
+      function renderCard(){
+        if(!CARDS.length) return;
+        const realIndex = order[idx];
+        const c = CARDS[realIndex];
+
+        deckInner.classList.remove("flipped");
+        frontTxt.textContent = c.front || "";
+        backTxt.textContent  = c.back || "";
+        counter.textContent = `${idx + 1} / ${CARDS.length}`;
+        deckCard.focus();
+      }
+
+      function flip(){ deckInner.classList.toggle("flipped"); }
+      function next(){ idx = (idx + 1) % CARDS.length; renderCard(); }
+      function prev(){ idx = (idx - 1 + CARDS.length) % CARDS.length; renderCard(); }
+
+      function shuffle(){
+        for(let i = order.length - 1; i > 0; i--){
+          const j = Math.floor(Math.random() * (i + 1));
+          [order[i], order[j]] = [order[j], order[i]];
+        }
+        idx = 0;
+        renderCard();
+      }
+
+      function reset(){
+        order = [...Array(CARDS.length).keys()];
+        idx = 0;
+        renderCard();
+      }
+
+      prevBtn.addEventListener("click", prev);
+      nextBtn.addEventListener("click", next);
+      flipBtn.addEventListener("click", flip);
+      deckCard.addEventListener("click", flip);
+      shuffleBtn.addEventListener("click", shuffle);
+      resetBtn.addEventListener("click", reset);
+
+      // Keyboard (deck)
+      document.addEventListener("keydown", (e) => {
+        const isDeck = deckView.style.display !== "none";
+        if(!isDeck) return;
+
+        if(e.key === "ArrowRight"){ e.preventDefault(); next(); }
+        if(e.key === "ArrowLeft"){ e.preventDefault(); prev(); }
+        if(e.key === " " || e.key === "Spacebar"){ e.preventDefault(); flip(); }
+      });
+
+      // Restore last mode
+      const saved = localStorage.getItem("flashMode") || "grid";
+      setMode(saved);
+      renderCard();
+    </script>
+
+  {% endif %}
+{% endblock %}

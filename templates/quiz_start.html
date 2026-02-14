@@ -1,0 +1,50 @@
+<!-- templates/quiz_start.html -->
+{% extends "base.html" %}
+{% block title %}{{ chapter.title }} • Quiz{% endblock %}
+
+{% block content %}
+  <div class="card">
+    <div class="cardPad">
+      <div class="row">
+        <div>
+          <h2 class="hubTitle">Quiz Setup</h2>
+          <p class="hubSub">{{ chapter.title }}</p>
+        </div>
+        <span class="chip">{{ total_questions }} total questions</span>
+      </div>
+
+      <div style="height:14px"></div>
+      <div class="divider"></div>
+      <div style="height:14px"></div>
+
+      <form method="POST">
+        <div class="row">
+          <div>
+            <div style="font-weight:850; margin-bottom:6px;">Number of questions</div>
+            <select name="num_questions">
+              <option value="10">10</option>
+              <option value="20" selected>20</option>
+              <option value="50">50</option>
+              <option value="all">All</option>
+            </select>
+          </div>
+
+          <div>
+            <div style="font-weight:850; margin-bottom:6px;">Randomize</div>
+            <select name="randomize">
+              <option value="yes" selected>Yes</option>
+              <option value="no">No</option>
+            </select>
+          </div>
+
+          <div style="align-self:flex-end;">
+            <button class="btn btnPrimary" type="submit">Start</button>
+          </div>
+        </div>
+
+        <div style="height:10px"></div>
+        <p class="muted" style="margin:0;">You’ll get option highlighting after each submission.</p>
+      </form>
+    </div>
+  </div>
+{% endblock %}

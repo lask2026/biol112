@@ -1,0 +1,80 @@
+<!-- templates/quiz.html -->
+{% extends "base.html" %}
+{% block title %}{{ chapter.title }} • Quiz{% endblock %}
+
+{% block content %}
+  <div class="card">
+    <div class="cardPad">
+      <div class="row">
+        <div class="chip">Question {{ current }} / {{ total }}</div>
+        <a class="btn btnSmall btnDanger" href="{{ url_for('chapter_reset', chapter_key=chapter.key) }}">Reset</a>
+      </div>
+
+      <div style="height:12px"></div>
+{% set qid = None %}
+{% set qtext = question %}
+
+{% if question.startswith('[') and '] ' in question %}
+  {% set qid = question[1:question.index(']')] %}
+  {% set qtext = question[question.index(']')+2:] %}
+{% endif %}
+
+{% if qid %}
+  <div class="row" style="margin-top:10px;">
+    <span class="chip">Question ID: {{ qid }}</span>
+  </div>
+  <div style="height:10px;"></div>
+{% endif %}
+
+<h2 class="hubTitle" style="font-size:18px; line-height:1.35;">{{ qtext }}</h2>
+
+      <div style="height:10px"></div>
+
+      {% if feedback and feedback.show %}
+        {% for opt in options %}
+          {% set cls = "opt" %}
+          {% if opt == feedback.correct %}
+            {% set cls = cls + " correct" %}
+          {% elif opt == feedback.selected and not feedback.is_correct %}
+            {% set cls = cls + " wrong" %}
+          {% endif %}
+
+          <div class="{{ cls }}">
+            <span style="font-weight:750;">{{ opt }}</span>
+            {% if opt == feedback.correct %}
+              <span class="tag correct">Correct</span>
+            {% endif %}
+            {% if opt == feedback.selected %}
+              {% if feedback.is_correct %}
+                <span class="tag correct">Your choice</span>
+              {% else %}
+                <span class="tag wrong">Your choice</span>
+              {% endif %}
+            {% endif %}
+          </div>
+        {% endfor %}
+
+        <div style="height:12px"></div>
+        <div class="row">
+          <a class="btn btnPrimary" href="{{ url_for('chapter_next_question', chapter_key=chapter.key) }}">Next</a>
+          <span class="muted" style="font-weight:650;">
+            Score: {{ session.get('score', 0) }} / {{ total }}
+          </span>
+        </div>
+
+      {% else %}
+        <form method="POST" action="{{ url_for('chapter_submit_answer', chapter_key=chapter.key) }}">
+          {% for opt in options %}
+            <label class="opt clickable">
+              <input type="radio" name="answer" value="{{ opt }}" required style="margin-right:10px;">
+              <span style="font-weight:750;">{{ opt }}</span>
+            </label>
+          {% endfor %}
+
+          <div style="height:12px"></div>
+          <button class="btn btnPrimary" type="submit">Submit</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

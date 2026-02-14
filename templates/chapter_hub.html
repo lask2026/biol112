@@ -1,0 +1,34 @@
+<!-- templates/chapter_hub.html -->
+{% extends "base.html" %}
+{% block title %}{{ chapter.title }}{% endblock %}
+
+{% block content %}
+  <div class="card">
+    <div class="cardPad">
+      <div class="row">
+        <div>
+          <h2 class="hubTitle">{{ chapter.title }}</h2>
+          <p class="hubSub">{{ chapter.exam_title }} • {{ chapter.id_raw }}</p>
+        </div>
+
+        <a class="btn btnPrimary" href="{{ url_for('chapter_quiz', chapter_key=chapter.key) }}">Start Quiz</a>
+      </div>
+
+      <div style="height:14px"></div>
+      <div class="divider"></div>
+      <div style="height:14px"></div>
+
+      <div class="row">
+        <a class="btn" href="{{ url_for('chapter_quiz', chapter_key=chapter.key) }}">Quiz</a>
+        <a class="btn" href="{{ url_for('chapter_flashcards', chapter_key=chapter.key) }}">Flashcards</a>
+        <a class="btn" href="{{ url_for('chapter_datatable', chapter_key=chapter.key) }}">Datatable</a>
+        <a class="btn" href="{{ url_for('chapter_resources', chapter_key=chapter.key) }}">Resources</a>
+      </div>
+
+      <div style="height:10px"></div>
+      <p class="muted" style="margin:0;">
+        Tip: Flashcards flip on click. Quiz shows instant feedback with green/red highlights.
+      </p>
+    </div>
+  </div>
+{% endblock %}

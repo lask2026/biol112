@@ -1,0 +1,37 @@
+<!-- templates/datatable.html -->
+{% extends "base.html" %}
+{% block title %}{{ chapter.title }} • Datatable{% endblock %}
+
+{% block content %}
+  <div class="row" style="margin-bottom:14px;">
+    <div>
+      <h2 class="hubTitle">Datatable</h2>
+      <p class="hubSub">{{ chapter.title }}</p>
+    </div>
+    <span class="chip">{{ rows|length }} rows</span>
+  </div>
+
+  <div class="card">
+    <div class="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            {% for c in columns %}
+              <th>{{ c }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+            <tr>
+              {% for c in columns %}
+                {% set v = r.get(c, '') %}
+                <td class="{{ 'wrapText' if (v|string)|length > 40 else '' }}">{{ v }}</td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}
