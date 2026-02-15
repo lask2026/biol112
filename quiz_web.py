@@ -4,19 +4,31 @@ import pandas as pd
 import random
 import os
 import re
+import secrets
 
 app = Flask(__name__)
-app.secret_key = "biology-quiz-secret-2026"
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Registry file
 CHAPTERS_REGISTRY = os.path.join(BASE_DIR, "chapters.csv")
 
+
+def env_bool(name: str, default: bool = False) -> bool:
+    v = os.getenv(name)
+    if v is None:
+        return default
+    return v.strip().lower() in {"1", "true", "yes", "on"}
+
+
+app.secret_key = os.getenv("SECRET_KEY") or secrets.token_hex(32)
+
 # Server-side sessions
 app.config["SESSION_TYPE"] = "filesystem"
 app.config["SESSION_FILE_DIR"] = os.path.join(BASE_DIR, "flask_session")
 app.config["SESSION_PERMANENT"] = False
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = env_bool("SESSION_COOKIE_SECURE", False)
 Session(app)
 
 
@@ -121,6 +133,40 @@ def load_registry_df() -> pd.DataFrame:
     return df
 
 
+def safe_load_table(path: str):
+    try:
+        return load_table_any(path), None
+    except Exception:
+        return None, f"Could not load file: {path}"
+
+
+def safe_load_questions(path: str):
+    try:
+        return load_questions_from_file(path), None
+    except Exception:
+        return None, f"Could not load quiz file: {path}"
+
+
+def get_csrf_token() -> str:
+    token = session.get("_csrf_token")
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session["_csrf_token"] = token
+    return token
+
+
+def require_csrf():
+    expected = session.get("_csrf_token")
+    provided = request.form.get("csrf_token", "")
+    if not expected or not provided or not secrets.compare_digest(expected, provided):
+        abort(400, description="Invalid CSRF token.")
+
+
+@app.context_processor
+def inject_csrf_token():
+    return {"csrf_token": get_csrf_token()}
+
+
 def build_exams():
     """
     Returns list like:
@@ -186,7 +232,15 @@ def load_questions_from_file(path: str) -> dict:
     Also supports Format B (older) for safety:
       Question, Option A..E, Answer
 
+    Optional:
+      Image column (local static path or URL), e.g. static/images/q1.png
+
     Returned dict key is the DISPLAY question string (includes Question ID if available).
+    Value shape:
+      {
+        "alternatives": [correct, wrong1, ...],
+        "image": "static/images/q1.png" | "https://..." | None
+      }
     """
     if not path or not os.path.exists(path):
         raise RuntimeError(f"Quiz file not found: {path}")
@@ -287,7 +341,16 @@ def load_questions_from_file(path: str) -> dict:
             continue
 
         alternatives = [correct_answer] + [o for o in options if o != correct_answer]
-        questions[q_display] = alternatives
+        image_val = row.get("Image", None) if "Image" in df.columns else None
+        image = None
+        if pd.notna(image_val):
+            image_s = str(image_val).strip()
+            if image_s and image_s.lower() != "nan":
+                image = image_s
+        questions[q_display] = {
+            "alternatives": alternatives,
+            "image": image,
+        }
 
     return questions
 
@@ -355,7 +418,13 @@ def render_current_question(chapter):
     if current >= len(quiz_questions):
         return redirect(url_for("chapter_results", chapter_key=chapter["key"]))
 
-    question, answers = quiz_questions[current]
+    question, payload = quiz_questions[current]
+    if isinstance(payload, dict):
+        answers = payload.get("alternatives", [])
+        question_image = payload.get("image")
+    else:
+        answers = payload
+        question_image = None
     correct_answer = answers[0]
 
     feedback = session.get("feedback")
@@ -369,11 +438,25 @@ def render_current_question(chapter):
 
     session["correct_answer"] = correct_answer
 
+    image_src = None
+    if question_image:
+        qimg = question_image.strip()
+        if qimg:
+            if qimg.startswith("http://") or qimg.startswith("https://"):
+                image_src = qimg
+            elif qimg.startswith("/static/"):
+                image_src = qimg
+            elif qimg.startswith("static/"):
+                image_src = url_for("static", filename=qimg[len("static/"):].lstrip("/"))
+            else:
+                image_src = url_for("static", filename=qimg.lstrip("/"))
+
     return render_template(
         "quiz.html",
         chapter=chapter,
         active="quiz",
         question=question,
+        question_image=image_src,
         options=options,
         current=current + 1,
         total=len(quiz_questions),
@@ -406,14 +489,32 @@ def chapter_quiz(chapter_key):
         abort(404)
 
     if request.method == "POST":
+        require_csrf()
         num_questions = request.form.get("num_questions", "20")
         randomize = request.form.get("randomize", "yes")
-        start_quiz_for_chapter(chapter, num_questions=num_questions, randomize=randomize)
+        try:
+            start_quiz_for_chapter(chapter, num_questions=num_questions, randomize=randomize)
+        except Exception as e:
+            total = 0
+            return render_template(
+                "quiz_start.html",
+                chapter=chapter,
+                active="quiz",
+                total_questions=total,
+                quiz_error=str(e),
+            )
         return redirect(url_for("chapter_quiz", chapter_key=chapter["key"]))
 
     if not quiz_started_for(chapter["key"]):
-        total = len(load_questions_from_file(chapter["quiz_file"]))
-        return render_template("quiz_start.html", chapter=chapter, active="quiz", total_questions=total)
+        questions, qerr = safe_load_questions(chapter["quiz_file"])
+        total = len(questions) if questions else 0
+        return render_template(
+            "quiz_start.html",
+            chapter=chapter,
+            active="quiz",
+            total_questions=total,
+            quiz_error=qerr,
+        )
 
     return render_current_question(chapter)
 
@@ -427,6 +528,7 @@ def chapter_submit_answer(chapter_key):
     if not quiz_started_for(chapter["key"]):
         return redirect(url_for("chapter_quiz", chapter_key=chapter["key"]))
 
+    require_csrf()
     selected = request.form.get("answer")
     correct = session.get("correct_answer")
 
@@ -502,7 +604,15 @@ def chapter_flashcards(chapter_key):
     fc_path = chapter.get("flashcards_file", "")
 
     if fc_path and os.path.exists(fc_path):
-        df = load_table_any(fc_path)
+        df, err = safe_load_table(fc_path)
+        if err:
+            return render_template(
+                "flashcards.html",
+                chapter=chapter,
+                active="flashcards",
+                cards=[],
+                cards_error=err,
+            )
         df.columns = df.columns.astype(str).str.strip()
 
         if "Front" in df.columns and "Back" in df.columns:
@@ -531,10 +641,29 @@ def chapter_flashcards(chapter_key):
                 abort(400, description="Flashcards CSV must have Front/Back or Question/Answer columns.")
     else:
         # fallback: derive from quiz correct answers
-        qdict = load_questions_from_file(chapter["quiz_file"])
-        cards = [{"front": q, "back": answers[0]} for q, answers in qdict.items() if answers]
+        qdict, err = safe_load_questions(chapter["quiz_file"])
+        if qdict:
+            cards = []
+            for q, payload in qdict.items():
+                answers = payload.get("alternatives", []) if isinstance(payload, dict) else payload
+                if answers:
+                    cards.append({"front": q, "back": answers[0]})
+        else:
+            return render_template(
+                "flashcards.html",
+                chapter=chapter,
+                active="flashcards",
+                cards=[],
+                cards_error=err,
+            )
 
-    return render_template("flashcards.html", chapter=chapter, active="flashcards", cards=cards)
+    return render_template(
+        "flashcards.html",
+        chapter=chapter,
+        active="flashcards",
+        cards=cards,
+        cards_error=None,
+    )
 
 
 @app.route("/chapter/<chapter_key>/datatable")
@@ -544,16 +673,40 @@ def chapter_datatable(chapter_key):
         abort(404)
 
     dt_path = chapter.get("datatable_file", "")
+    table_error = None
     if dt_path and os.path.exists(dt_path):
-        df = load_table_any(dt_path)
+        df, err = safe_load_table(dt_path)
+        if err:
+            df = None
+            table_error = err
     else:
         # fallback: show quiz file as table
-        df = load_table_any(chapter["quiz_file"])
+        df, err = safe_load_table(chapter["quiz_file"])
+        if err:
+            df = None
+            table_error = err
+
+    if df is None:
+        return render_template(
+            "datatable.html",
+            chapter=chapter,
+            active="datatable",
+            columns=[],
+            rows=[],
+            table_error=table_error,
+        )
 
     columns = list(df.columns)
     rows = df.fillna("").astype(str).to_dict("records")
 
-    return render_template("datatable.html", chapter=chapter, active="datatable", columns=columns, rows=rows)
+    return render_template(
+        "datatable.html",
+        chapter=chapter,
+        active="datatable",
+        columns=columns,
+        rows=rows,
+        table_error=table_error,
+    )
 
 
 @app.route("/chapter/<chapter_key>/resources")
@@ -572,4 +725,4 @@ def chapter_resources(chapter_key):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=env_bool("FLASK_DEBUG", False))

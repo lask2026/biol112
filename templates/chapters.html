@@ -32,7 +32,7 @@
             {% for ch in exam.chapters %}
               <a class="chapterLink" href="{{ url_for('chapter_hub', chapter_key=ch.key) }}">
                 <span class="chapterName">{{ ch.title }}</span>
-                <span class="chapterChevron">›</span>
+                <span class="chapterChevron">&rsaquo;</span>
               </a>
             {% endfor %}
           </div>

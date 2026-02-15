@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ chapter.title }} • Flashcards{% endblock %}
+{% block title %}{{ chapter.title }} &bull; Flashcards{% endblock %}
 
 {% block content %}
   <div class="row" style="margin-bottom:14px;">
@@ -7,7 +7,7 @@
       <h2 class="hubTitle">Flashcards</h2>
       <p class="hubSub">{{ chapter.title }}</p>
       <div class="muted" style="font-weight:650; font-size:13px;">
-        Grid: click a card to reveal answer • Deck: click to flip • ←/→ navigate • Space flips
+        Grid: click a card to reveal answer &bull; Deck: click to flip &bull; &larr;/&rarr; navigate &bull; Space flips
       </div>
     </div>
 
@@ -23,6 +23,12 @@
       <div class="cardPad">
         <b>No flashcards found.</b>
         <div class="muted">Add flashcards CSV with columns Front, Back (or Question, Answer).</div>
+        {% if cards_error %}
+          <div class="opt wrong" style="margin:12px 0 0 0;">
+            <div style="font-weight:750;">Flashcard content unavailable for this chapter.</div>
+            <div class="muted">{{ cards_error }}</div>
+          </div>
+        {% endif %}
       </div>
     </div>
   {% else %}
@@ -82,14 +88,14 @@
         <div style="height:16px;"></div>
 
         <div class="row" style="justify-content:center; gap:12px;">
-          <button class="btn" id="prevBtn" type="button">← Prev</button>
+          <button class="btn" id="prevBtn" type="button">&larr; Prev</button>
           <button class="btn btnPrimary" id="flipBtn" type="button">Flip</button>
-          <button class="btn" id="nextBtn" type="button">Next →</button>
+          <button class="btn" id="nextBtn" type="button">Next &rarr;</button>
         </div>
 
         <div style="height:10px;"></div>
         <div class="muted" style="text-align:center; font-weight:650; font-size:13px;">
-          Tip: Use ←/→ for navigation, Space to flip.
+          Tip: Use &larr;/&rarr; for navigation, Space to flip.
         </div>
       </div>
     </div>
@@ -107,7 +113,7 @@
         cursor:pointer;
       }
 
-      /* optional: small “reveal” animation */
+      /* optional: small reveal animation */
       .gridCard.revealed .gridBack{
         animation: revealIn 160ms ease-out;
       }
@@ -146,8 +152,8 @@
         inset:0;
         border-radius: 22px;
         padding: 18px 18px;
-        background:#fff;
-        border: 1px solid rgba(230,234,242,1);
+        background:#f5e2bd;
+        border: 2px solid #6b4a33;
         backface-visibility: hidden;
 
         /* center content */
@@ -163,11 +169,11 @@
         display:inline-flex;
         padding: 6px 10px;
         border-radius: 999px;
-        border: 1px solid rgba(230,234,242,1);
-        background: rgba(15,23,42,0.03);
+        border: 2px solid #6b4831;
+        background: #edd4ab;
         font-weight: 800;
         font-size: 12px;
-        color: var(--muted);
+        color: #4f321f;
         margin-bottom: 14px;
       }
 

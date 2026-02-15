@@ -1,6 +1,6 @@
 <!-- templates/quiz.html -->
 {% extends "base.html" %}
-{% block title %}{{ chapter.title }} • Quiz{% endblock %}
+{% block title %}{{ chapter.title }} &bull; Quiz{% endblock %}
 
 {% block content %}
   <div class="card">
@@ -27,6 +27,18 @@
 {% endif %}
 
 <h2 class="hubTitle" style="font-size:18px; line-height:1.35;">{{ qtext }}</h2>
+
+{% if question_image %}
+  <div style="height:12px"></div>
+  <div class="card" style="border-width:2px; box-shadow:none;">
+    <img
+      src="{{ question_image }}"
+      alt="Question image"
+      style="display:block; width:100%; max-height:420px; object-fit:contain; background:#f3dfba;"
+      loading="lazy"
+    >
+  </div>
+{% endif %}
 
       <div style="height:10px"></div>
 
@@ -64,6 +76,7 @@
 
       {% else %}
         <form method="POST" action="{{ url_for('chapter_submit_answer', chapter_key=chapter.key) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           {% for opt in options %}
             <label class="opt clickable">
               <input type="radio" name="answer" value="{{ opt }}" required style="margin-right:10px;">

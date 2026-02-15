@@ -1,6 +1,6 @@
 <!-- templates/quiz_start.html -->
 {% extends "base.html" %}
-{% block title %}{{ chapter.title }} • Quiz{% endblock %}
+{% block title %}{{ chapter.title }} &bull; Quiz{% endblock %}
 
 {% block content %}
   <div class="card">
@@ -17,7 +17,15 @@
       <div class="divider"></div>
       <div style="height:14px"></div>
 
+      {% if quiz_error %}
+        <div class="opt wrong" style="margin:0 0 14px 0;">
+          <div style="font-weight:750;">Quiz content unavailable for this chapter.</div>
+          <div class="muted">{{ quiz_error }}</div>
+        </div>
+      {% endif %}
+
       <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="row">
           <div>
             <div style="font-weight:850; margin-bottom:6px;">Number of questions</div>
@@ -38,12 +46,12 @@
           </div>
 
           <div style="align-self:flex-end;">
-            <button class="btn btnPrimary" type="submit">Start</button>
+            <button class="btn btnPrimary" type="submit" {% if quiz_error %}disabled{% endif %}>Start</button>
           </div>
         </div>
 
         <div style="height:10px"></div>
-        <p class="muted" style="margin:0;">You’ll get option highlighting after each submission.</p>
+        <p class="muted" style="margin:0;">You&#39;ll get option highlighting after each submission.</p>
       </form>
     </div>
   </div>
