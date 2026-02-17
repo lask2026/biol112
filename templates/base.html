@@ -298,12 +298,60 @@
       color:#28467f;
     }
 
+    .chip.streakLive{
+      background:linear-gradient(145deg, #fff0b8, #ffd96e);
+      border-color:#f2be3f;
+      color:#5a3b00;
+      animation:streakPop .32s ease;
+    }
+
+    .chip.xp{
+      background:linear-gradient(145deg, #dff7ff, #b9ecff);
+      border-color:#8fd6ef;
+      color:#0f4f67;
+    }
+
+    .progressWrap{
+      width:100%;
+      height:12px;
+      border-radius:999px;
+      border:1px solid #b8caf8;
+      background:#edf3ff;
+      overflow:hidden;
+    }
+
+    .progressBar{
+      height:100%;
+      width:0;
+      background:linear-gradient(90deg, #ff8e44, #ffd06b 40%, #3bc7b6);
+      transition:width .45s ease;
+    }
+
+    .quizCard{
+      animation:slideIn .34s ease both;
+    }
+
     .opt{
+      display:block;
       border:1px solid #c7d8fb;
       border-radius:12px;
       padding:12px 14px;
       margin:10px 0;
       background:#f9fbff;
+    }
+
+    .optionReveal{
+      opacity:1;
+      transform:none;
+    }
+
+    @media (prefers-reduced-motion: no-preference){
+      .optionReveal{
+        opacity:0;
+        transform:translateY(8px);
+        animation:optionIn .28s ease forwards;
+        animation-delay:calc(var(--i) * 60ms);
+      }
     }
 
     .opt.clickable{
@@ -326,6 +374,70 @@
     .opt.wrong{
       border-color:#efacac;
       background:var(--badBg);
+    }
+
+    .quizFeedback.correct{animation:pulseGood .32s ease;}
+    .quizFeedback.wrong{animation:shakeBad .32s ease;}
+
+    .confetti{
+      position:relative;
+      overflow:hidden;
+      border-radius:14px;
+      border:1px solid #b9e5d2;
+      background:linear-gradient(135deg, #ebfff5, #f7fff1);
+      padding:10px;
+      min-height:44px;
+    }
+
+    .confetti i{
+      position:absolute;
+      width:8px;
+      height:16px;
+      top:-18px;
+      opacity:.9;
+      animation:fall 1.6s linear infinite;
+    }
+
+    .confetti i:nth-child(3n){background:#ff8e44;}
+    .confetti i:nth-child(3n+1){background:#1daf9f;}
+    .confetti i:nth-child(3n+2){background:#ffd06b;}
+
+    @keyframes optionIn{
+      from{opacity:0;transform:translateY(8px)}
+      to{opacity:1;transform:translateY(0)}
+    }
+
+    @keyframes slideIn{
+      from{opacity:0;transform:translateX(16px)}
+      to{opacity:1;transform:translateX(0)}
+    }
+
+    @keyframes pulseGood{
+      0%{transform:scale(1)}
+      55%{transform:scale(1.016)}
+      100%{transform:scale(1)}
+    }
+
+    @keyframes shakeBad{
+      0%,100%{transform:translateX(0)}
+      25%{transform:translateX(-5px)}
+      50%{transform:translateX(5px)}
+      75%{transform:translateX(-3px)}
+    }
+
+    @keyframes streakPop{
+      0%{transform:scale(.92)}
+      100%{transform:scale(1)}
+    }
+
+    @keyframes fall{
+      from{transform:translateY(0) rotate(0deg)}
+      to{transform:translateY(72px) rotate(180deg)}
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      .quizCard,.optionReveal,.quizFeedback.correct,.quizFeedback.wrong,.chip.streakLive,.confetti i{animation:none !important;}
+      .progressBar{transition:none;}
     }
 
     .tag{
@@ -447,14 +559,9 @@
         </div>
 
         <div class="nav">
+          <a href="{{ url_for('chapters_home') }}" class="{{ 'active' if not chapter else '' }}">Home</a>
           {% if chapter %}
-            <a href="{{ url_for('chapter_hub', chapter_key=chapter.key) }}" class="{{ 'active' if active=='hub' else '' }}">Chapter</a>
             <a href="{{ url_for('chapter_quiz', chapter_key=chapter.key) }}" class="{{ 'active' if active=='quiz' else '' }}">Quiz</a>
-            <a href="{{ url_for('chapter_flashcards', chapter_key=chapter.key) }}" class="{{ 'active' if active=='flashcards' else '' }}">Flashcards</a>
-            <a href="{{ url_for('chapter_datatable', chapter_key=chapter.key) }}" class="{{ 'active' if active=='datatable' else '' }}">Datatable</a>
-            <a href="{{ url_for('chapter_resources', chapter_key=chapter.key) }}" class="{{ 'active' if active=='resources' else '' }}">Resources</a>
-          {% else %}
-            <a href="{{ url_for('chapters_home') }}" class="active">Home</a>
           {% endif %}
         </div>
       </div>

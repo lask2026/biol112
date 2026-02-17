@@ -39,9 +39,6 @@ class QuizWebTests(unittest.TestCase):
                     "chapter_title",
                     "order",
                     "quiz_file",
-                    "flashcards_file",
-                    "datatable_file",
-                    "resources_file",
                 ]
             )
             writer.writerows(rows)
@@ -95,9 +92,6 @@ class QuizWebTests(unittest.TestCase):
                     "Intro",
                     "1",
                     quiz_path,
-                    "",
-                    "",
-                    "",
                 ]
             ]
         )
@@ -109,7 +103,7 @@ class QuizWebTests(unittest.TestCase):
 
         r2 = self.client.post(
             "/chapter/chapter1/quiz",
-            data={"num_questions": "1", "randomize": "no", "csrf_token": token},
+            data={"csrf_token": token},
             follow_redirects=True,
         )
         self.assertEqual(r2.status_code, 200)
@@ -123,15 +117,21 @@ class QuizWebTests(unittest.TestCase):
         self.assertEqual(r3.status_code, 200)
         self.assertIn("Correct", r3.get_data(as_text=True))
 
+        token2 = self._csrf_token(r3.get_data(as_text=True))
+        r_jump = self.client.post(
+            "/chapter/chapter1/goto",
+            data={"question_number": "1", "csrf_token": token2},
+            follow_redirects=True,
+        )
+        self.assertEqual(r_jump.status_code, 200)
+        self.assertIn("Sky color?", r_jump.get_data(as_text=True))
+
         r4 = self.client.get("/chapter/chapter1/next", follow_redirects=True)
         self.assertEqual(r4.status_code, 200)
         self.assertIn("Results", r4.get_data(as_text=True))
 
     def test_missing_files_render_fallback_messages(self):
         missing_quiz = os.path.join(self.tmpdir, "missing_quiz.csv")
-        missing_dt = os.path.join(self.tmpdir, "missing_dt.csv")
-        missing_fc = os.path.join(self.tmpdir, "missing_fc.csv")
-
         self._write_registry(
             [
                 [
@@ -141,9 +141,6 @@ class QuizWebTests(unittest.TestCase):
                     "Missing Content",
                     "1",
                     missing_quiz,
-                    missing_fc,
-                    missing_dt,
-                    "",
                 ]
             ]
         )
@@ -152,13 +149,6 @@ class QuizWebTests(unittest.TestCase):
         self.assertEqual(rq.status_code, 200)
         self.assertIn("Quiz content unavailable for this chapter.", rq.get_data(as_text=True))
 
-        rf = self.client.get("/chapter/chapter2/flashcards")
-        self.assertEqual(rf.status_code, 200)
-        self.assertIn("Flashcard content unavailable for this chapter.", rf.get_data(as_text=True))
-
-        rd = self.client.get("/chapter/chapter2/datatable")
-        self.assertEqual(rd.status_code, 200)
-        self.assertIn("No data available for this chapter.", rd.get_data(as_text=True))
 
 
 if __name__ == "__main__":

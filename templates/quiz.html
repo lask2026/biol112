@@ -3,12 +3,36 @@
 {% block title %}{{ chapter.title }} &bull; Quiz{% endblock %}
 
 {% block content %}
-  <div class="card">
+  <div class="card quizCard">
     <div class="cardPad">
       <div class="row">
         <div class="chip">Question {{ current }} / {{ total }}</div>
-        <a class="btn btnSmall btnDanger" href="{{ url_for('chapter_reset', chapter_key=chapter.key) }}">Reset</a>
+        <div class="row" style="gap:8px;">
+          <div class="chip xp">XP: {{ xp }}</div>
+          <div class="chip {{ 'streakLive' if current_streak >= 2 else '' }}">Streak: {{ current_streak }}</div>
+          <div class="chip">Best: {{ best_streak }}</div>
+        </div>
       </div>
+      <div style="height:8px"></div>
+      <div class="progressWrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ progress_pct|round|int }}">
+        <div class="progressBar" style="width: {{ progress_pct }}%;"></div>
+      </div>
+      <div style="height:8px"></div>
+      <div class="row">
+        <div class="row" style="gap:8px;">
+          <a class="btn btnSmall" href="{{ url_for('chapter_results', chapter_key=chapter.key) }}">Results</a>
+          <form method="POST" action="{{ url_for('chapter_goto_question', chapter_key=chapter.key) }}" style="display:flex; gap:8px; align-items:center;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="text" name="question_number" inputmode="numeric" pattern="[0-9]*" value="{{ current }}" style="width:80px;" aria-label="Question number">
+            <button class="btn btnSmall" type="submit">Go</button>
+          </form>
+          <a class="btn btnSmall btnDanger" href="{{ url_for('chapter_reset', chapter_key=chapter.key) }}">Reset</a>
+        </div>
+      </div>
+      <div style="height:8px"></div>
+      <p style="margin:0; color:#9f3434; font-weight:800; background:#ffe3e3; border:1px solid #efacac; border-radius:10px; padding:8px 10px;">
+        You can open Results anytime. Please click Results before exiting so your summary is visible.
+      </p>
 
       <div style="height:12px"></div>
 {% set qid = None %}
@@ -26,7 +50,7 @@
   <div style="height:10px;"></div>
 {% endif %}
 
-<h2 class="hubTitle" style="font-size:18px; line-height:1.35;">{{ qtext }}</h2>
+<h2 class="hubTitle" style="font-size:18px; line-height:1.35; white-space:pre-line;">{{ qtext }}</h2>
 
 {% if question_image %}
   <div style="height:12px"></div>
@@ -46,9 +70,9 @@
         {% for opt in options %}
           {% set cls = "opt" %}
           {% if opt == feedback.correct %}
-            {% set cls = cls + " correct" %}
+            {% set cls = cls + " correct quizFeedback" %}
           {% elif opt == feedback.selected and not feedback.is_correct %}
-            {% set cls = cls + " wrong" %}
+            {% set cls = cls + " wrong quizFeedback" %}
           {% endif %}
 
           <div class="{{ cls }}">
@@ -69,6 +93,9 @@
         <div style="height:12px"></div>
         <div class="row">
           <a class="btn btnPrimary" href="{{ url_for('chapter_next_question', chapter_key=chapter.key) }}">Next</a>
+          {% if feedback.is_correct %}
+            <span class="chip xp">+10 XP</span>
+          {% endif %}
           <span class="muted" style="font-weight:650;">
             Score: {{ session.get('score', 0) }} / {{ total }}
           </span>

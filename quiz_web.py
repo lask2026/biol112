@@ -104,17 +104,13 @@ def load_registry_df() -> pd.DataFrame:
         "chapter_title",
         "order",
         "quiz_file",
-        "flashcards_file",
-        "datatable_file",
-        "resources_file",
     ]
     missing = [c for c in required if c not in df.columns]
     if missing:
         raise RuntimeError(f"chapters.csv missing columns: {missing}")
 
     # Strip whitespace
-    for c in ["exam_id", "exam_title", "chapter_id", "chapter_title", "quiz_file",
-              "flashcards_file", "datatable_file", "resources_file"]:
+    for c in ["exam_id", "exam_title", "chapter_id", "chapter_title", "quiz_file"]:
         df[c] = df[c].astype(str).str.strip()
 
     # Normalize keys used by routes
@@ -131,13 +127,6 @@ def load_registry_df() -> pd.DataFrame:
     df["order_num"] = df["order"].apply(to_int)
 
     return df
-
-
-def safe_load_table(path: str):
-    try:
-        return load_table_any(path), None
-    except Exception:
-        return None, f"Could not load file: {path}"
 
 
 def safe_load_questions(path: str):
@@ -215,9 +204,6 @@ def get_chapter_by_key(chapter_key: str):
         "exam_key": r["exam_key"],
         "exam_title": r["exam_title"],
         "quiz_file": abs_path(r["quiz_file"]),
-        "flashcards_file": abs_path(r["flashcards_file"]),
-        "datatable_file": abs_path(r["datatable_file"]),
-        "resources_file": abs_path(r["resources_file"]),
     }
 
 
@@ -364,6 +350,10 @@ def clear_quiz_state():
         "quiz_questions",
         "current_question",
         "score",
+        "xp",
+        "current_streak",
+        "best_streak",
+        "question_stats",
         "correct_answer",
         "feedback",
         "chapter_key",
@@ -382,7 +372,7 @@ def quiz_started_for(chapter_key: str) -> bool:
     )
 
 
-def start_quiz_for_chapter(chapter, num_questions: str, randomize: str):
+def start_quiz_for_chapter(chapter):
     clear_quiz_state()
 
     questions = load_questions_from_file(chapter["quiz_file"])
@@ -391,24 +381,16 @@ def start_quiz_for_chapter(chapter, num_questions: str, randomize: str):
 
     all_q = list(questions.items())  # [(question, [correct,...]), ...]
 
-    if num_questions == "all":
-        n = len(all_q)
-    else:
-        try:
-            n = int(num_questions)
-        except Exception:
-            n = 20
-        n = max(1, min(n, len(all_q)))
-
-    if randomize == "yes":
-        quiz_questions = random.sample(all_q, k=n)
-    else:
-        quiz_questions = all_q[:n]
+    quiz_questions = all_q
 
     session["chapter_key"] = chapter["key"]
     session["quiz_questions"] = quiz_questions
     session["current_question"] = 0
     session["score"] = 0
+    session["xp"] = 0
+    session["current_streak"] = 0
+    session["best_streak"] = 0
+    session["question_stats"] = {}
 
 
 def render_current_question(chapter):
@@ -460,6 +442,10 @@ def render_current_question(chapter):
         options=options,
         current=current + 1,
         total=len(quiz_questions),
+        progress_pct=((current + 1) / len(quiz_questions) * 100) if quiz_questions else 0,
+        xp=session.get("xp", 0),
+        current_streak=session.get("current_streak", 0),
+        best_streak=session.get("best_streak", 0),
         feedback=feedback,
     )
 
@@ -474,14 +460,6 @@ def chapters_home():
     return render_template("chapters.html", exams=exams)
 
 
-@app.route("/chapter/<chapter_key>/")
-def chapter_hub(chapter_key):
-    chapter = get_chapter_by_key(chapter_key)
-    if not chapter:
-        abort(404)
-    return render_template("chapter_hub.html", chapter=chapter, active="hub")
-
-
 @app.route("/chapter/<chapter_key>/quiz", methods=["GET", "POST"])
 def chapter_quiz(chapter_key):
     chapter = get_chapter_by_key(chapter_key)
@@ -490,10 +468,8 @@ def chapter_quiz(chapter_key):
 
     if request.method == "POST":
         require_csrf()
-        num_questions = request.form.get("num_questions", "20")
-        randomize = request.form.get("randomize", "yes")
         try:
-            start_quiz_for_chapter(chapter, num_questions=num_questions, randomize=randomize)
+            start_quiz_for_chapter(chapter)
         except Exception as e:
             total = 0
             return render_template(
@@ -533,8 +509,36 @@ def chapter_submit_answer(chapter_key):
     correct = session.get("correct_answer")
 
     is_correct = (selected == correct)
-    if is_correct:
+    current_idx = session.get("current_question", 0)
+    question_text = ""
+    quiz_questions = session.get("quiz_questions", [])
+    if 0 <= current_idx < len(quiz_questions):
+        question_text = quiz_questions[current_idx][0]
+
+    question_stats = session.get("question_stats", {})
+    previous = question_stats.get(str(current_idx))
+    prev_correct = bool(previous and previous.get("is_correct"))
+
+    if prev_correct and not is_correct:
+        session["score"] = max(0, session.get("score", 0) - 1)
+        session["xp"] = max(0, session.get("xp", 0) - 10)
+    elif (not prev_correct) and is_correct:
         session["score"] = session.get("score", 0) + 1
+        session["xp"] = session.get("xp", 0) + 10
+
+    if is_correct:
+        streak = session.get("current_streak", 0) + 1
+        session["current_streak"] = streak
+        session["best_streak"] = max(session.get("best_streak", 0), streak)
+    else:
+        session["current_streak"] = 0
+    question_stats[str(current_idx)] = {
+        "question": question_text,
+        "selected": selected,
+        "correct": correct,
+        "is_correct": is_correct,
+    }
+    session["question_stats"] = question_stats
 
     session["feedback"] = {
         "selected": selected,
@@ -562,6 +566,32 @@ def chapter_next_question(chapter_key):
     return redirect(url_for("chapter_quiz", chapter_key=chapter["key"]))
 
 
+@app.route("/chapter/<chapter_key>/goto", methods=["POST"])
+def chapter_goto_question(chapter_key):
+    chapter = get_chapter_by_key(chapter_key)
+    if not chapter:
+        abort(404)
+
+    if not quiz_started_for(chapter["key"]):
+        return redirect(url_for("chapter_quiz", chapter_key=chapter["key"]))
+
+    require_csrf()
+
+    total = len(session.get("quiz_questions", []))
+    raw_num = (request.form.get("question_number") or "").strip()
+    try:
+        target = int(raw_num)
+    except Exception:
+        return redirect(url_for("chapter_quiz", chapter_key=chapter["key"]))
+
+    target = max(1, min(target, total))
+    session["current_question"] = target - 1
+    session.pop("feedback", None)
+    session.pop("current_options", None)
+    session.pop("correct_answer", None)
+    return redirect(url_for("chapter_quiz", chapter_key=chapter["key"]))
+
+
 @app.route("/chapter/<chapter_key>/results")
 def chapter_results(chapter_key):
     chapter = get_chapter_by_key(chapter_key)
@@ -571,17 +601,35 @@ def chapter_results(chapter_key):
     if not quiz_started_for(chapter["key"]):
         return redirect(url_for("chapter_quiz", chapter_key=chapter["key"]))
 
-    score = session.get("score", 0)
+    question_stats = session.get("question_stats", {})
+    answered_entries = list(question_stats.values())
+    score = sum(1 for e in answered_entries if e.get("is_correct"))
+    wrong_count = sum(1 for e in answered_entries if not e.get("is_correct"))
+    answered_count = len(answered_entries)
     total = len(session.get("quiz_questions", []))
     percentage = (score / total) * 100 if total else 0.0
+    unanswered_count = max(0, total - answered_count)
+
+    wrong_questions = []
+    for idx in sorted(question_stats.keys(), key=lambda x: int(x)):
+        entry = question_stats[idx]
+        if not entry.get("is_correct"):
+            wrong_questions.append(entry)
 
     return render_template(
         "results.html",
         chapter=chapter,
         active="quiz",
         score=score,
+        wrong_count=wrong_count,
+        answered_count=answered_count,
+        unanswered_count=unanswered_count,
         total=total,
         percentage=percentage,
+        wrong_questions=wrong_questions,
+        xp=session.get("xp", 0),
+        best_streak=session.get("best_streak", 0),
+        show_confetti=(answered_count > 0 and percentage >= 85),
     )
 
 
@@ -592,136 +640,6 @@ def chapter_reset(chapter_key):
         abort(404)
     clear_quiz_state()
     return redirect(url_for("chapter_quiz", chapter_key=chapter["key"]))
-
-
-@app.route("/chapter/<chapter_key>/flashcards")
-def chapter_flashcards(chapter_key):
-    chapter = get_chapter_by_key(chapter_key)
-    if not chapter:
-        abort(404)
-
-    cards = []
-    fc_path = chapter.get("flashcards_file", "")
-
-    if fc_path and os.path.exists(fc_path):
-        df, err = safe_load_table(fc_path)
-        if err:
-            return render_template(
-                "flashcards.html",
-                chapter=chapter,
-                active="flashcards",
-                cards=[],
-                cards_error=err,
-            )
-        df.columns = df.columns.astype(str).str.strip()
-
-        if "Front" in df.columns and "Back" in df.columns:
-            for _, r in df.iterrows():
-                front = r.get("Front", "")
-                back = r.get("Back", "")
-                if pd.isna(front) or pd.isna(back):
-                    continue
-                front_s = str(front).strip()
-                back_s = str(back).strip()
-                if front_s and front_s.lower() != "nan":
-                    cards.append({"front": front_s, "back": back_s})
-        else:
-            # If you want flashcards CSV to be quiz-format too, you can derive from Question/Answer:
-            if "Question" in df.columns and "Answer" in df.columns:
-                for _, r in df.iterrows():
-                    q = r.get("Question", "")
-                    a = r.get("Answer", "")
-                    if pd.isna(q) or pd.isna(a):
-                        continue
-                    q = str(q).strip()
-                    a = str(a).strip()
-                    if q and q.lower() != "nan":
-                        cards.append({"front": q, "back": a})
-            else:
-                abort(400, description="Flashcards CSV must have Front/Back or Question/Answer columns.")
-    else:
-        # fallback: derive from quiz correct answers
-        qdict, err = safe_load_questions(chapter["quiz_file"])
-        if qdict:
-            cards = []
-            for q, payload in qdict.items():
-                answers = payload.get("alternatives", []) if isinstance(payload, dict) else payload
-                if answers:
-                    cards.append({"front": q, "back": answers[0]})
-        else:
-            return render_template(
-                "flashcards.html",
-                chapter=chapter,
-                active="flashcards",
-                cards=[],
-                cards_error=err,
-            )
-
-    return render_template(
-        "flashcards.html",
-        chapter=chapter,
-        active="flashcards",
-        cards=cards,
-        cards_error=None,
-    )
-
-
-@app.route("/chapter/<chapter_key>/datatable")
-def chapter_datatable(chapter_key):
-    chapter = get_chapter_by_key(chapter_key)
-    if not chapter:
-        abort(404)
-
-    dt_path = chapter.get("datatable_file", "")
-    table_error = None
-    if dt_path and os.path.exists(dt_path):
-        df, err = safe_load_table(dt_path)
-        if err:
-            df = None
-            table_error = err
-    else:
-        # fallback: show quiz file as table
-        df, err = safe_load_table(chapter["quiz_file"])
-        if err:
-            df = None
-            table_error = err
-
-    if df is None:
-        return render_template(
-            "datatable.html",
-            chapter=chapter,
-            active="datatable",
-            columns=[],
-            rows=[],
-            table_error=table_error,
-        )
-
-    columns = list(df.columns)
-    rows = df.fillna("").astype(str).to_dict("records")
-
-    return render_template(
-        "datatable.html",
-        chapter=chapter,
-        active="datatable",
-        columns=columns,
-        rows=rows,
-        table_error=table_error,
-    )
-
-
-@app.route("/chapter/<chapter_key>/resources")
-def chapter_resources(chapter_key):
-    chapter = get_chapter_by_key(chapter_key)
-    if not chapter:
-        abort(404)
-
-    content = ""
-    rp = chapter.get("resources_file", "")
-    if rp and os.path.exists(rp):
-        with open(rp, "r", encoding="utf-8") as f:
-            content = f.read()
-
-    return render_template("resources.html", chapter=chapter, active="resources", content=content)
 
 
 if __name__ == "__main__":

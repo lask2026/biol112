@@ -5,6 +5,14 @@
 {% block content %}
   <div class="card">
     <div class="cardPad">
+      {% if show_confetti %}
+        <div class="confetti" aria-hidden="true">
+          {% for i in range(24) %}
+            <i style="left: {{ (i * 4) % 96 }}%; animation-delay: {{ (i % 8) * 0.12 }}s;"></i>
+          {% endfor %}
+        </div>
+        <div style="height:10px"></div>
+      {% endif %}
       <div class="row">
         <div>
           <h2 class="hubTitle">Results</h2>
@@ -19,8 +27,33 @@
 
       <div class="row">
         <div class="chip">Score: {{ score }} / {{ total }}</div>
+        <div class="chip">Wrong: {{ wrong_count }}</div>
+        <div class="chip">Answered: {{ answered_count }}</div>
+        <div class="chip">Unanswered: {{ unanswered_count }}</div>
+        <div class="chip xp">XP: {{ xp }}</div>
+        <div class="chip">Best Streak: {{ best_streak }}</div>
         <div class="chip">Percentage: {{ "%.1f"|format(percentage) }}%</div>
       </div>
+
+      <div style="height:14px"></div>
+      <div class="divider"></div>
+      <div style="height:14px"></div>
+
+      <h3 class="hubTitle" style="font-size:18px;">Wrong Questions Summary</h3>
+      <div style="height:8px"></div>
+      {% if wrong_questions %}
+        {% for item in wrong_questions %}
+          <div class="opt wrong">
+            <div style="font-weight:750; margin-bottom:8px;">{{ item.question }}</div>
+            <div><b>Your answer:</b> {{ item.selected or "No answer" }}</div>
+            <div><b>Correct answer:</b> {{ item.correct }}</div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="opt correct">
+          <div style="font-weight:750;">No wrong questions in this attempt.</div>
+        </div>
+      {% endif %}
 
       <div style="height:14px"></div>
       <a class="btn btnDanger" href="{{ url_for('chapter_reset', chapter_key=chapter.key) }}">Reset quiz state</a>
