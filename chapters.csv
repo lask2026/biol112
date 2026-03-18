@@ -2,3 +2,7 @@ exam_id,exam_title,chapter_id,chapter_title,order,quiz_file
 Exam 2,Exam 2 Test 2/26/2026,Chapter 26,Bacteria & Archaea,1,chapter26_questions.csv
 Exam 2,Exam 2 Test 2/26/2026,Chapter 27,Protists,2,chapter27_questions.csv
 Exam 2,Exam 2 Test 2/26/2026,Chapter 28,Green Algae & Land Plants,3,chapter28_questions.csv
+Exam 3,Exam 3 Test 3/31/2026,Chapter 29,Fungi,1,chapter29_questions.csv
+Exam 3,Exam 3 Test 3/31/2026,Chapter 30,Introduction to Animals,2,chapter30_questions.csv
+Exam 3,Exam 3 Test 3/31/2026,Chapter 31,Protostomes,3,chapter31_questions.csv
+Exam 3,Exam 3 Test 3/31/2026,Chapter 32,Deuterostomes,4,chapter32_questions.csv
