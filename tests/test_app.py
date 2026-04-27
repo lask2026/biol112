@@ -2,15 +2,16 @@ import csv
 import os
 import re
 import shutil
-import tempfile
 import unittest
+import uuid
 
 import quiz_web
 
 
 class QuizWebTests(unittest.TestCase):
     def setUp(self):
-        self.tmpdir = tempfile.mkdtemp(prefix="biol112_test_")
+        self.tmpdir = os.path.join(os.getcwd(), ".test_tmp", f"biol112_test_{uuid.uuid4().hex}")
+        os.makedirs(self.tmpdir, exist_ok=True)
         self.registry_path = os.path.join(self.tmpdir, "chapters.csv")
         self.session_dir = os.path.join(self.tmpdir, "flask_session")
         os.makedirs(self.session_dir, exist_ok=True)
@@ -67,6 +68,35 @@ class QuizWebTests(unittest.TestCase):
         questions = quiz_web.load_questions_from_file(quiz_path)
         self.assertIn("[Q1] What is 2+2?", questions)
         self.assertEqual(questions["[Q1] What is 2+2?"]["alternatives"][0], "4")
+
+    def test_load_questions_accepts_image_link_column(self):
+        quiz_path = os.path.join(self.tmpdir, "quiz_with_image_link.csv")
+        with open(quiz_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(
+                [
+                    "Question Text",
+                    "Option 1",
+                    "Option 2",
+                    "Correct Answer",
+                    "Image Link",
+                ]
+            )
+            writer.writerow(
+                [
+                    "Identify the structure.",
+                    "Leaf",
+                    "Root",
+                    "1",
+                    "static/images/example.png",
+                ]
+            )
+
+        questions = quiz_web.load_questions_from_file(quiz_path)
+        self.assertEqual(
+            questions["Identify the structure."]["image"],
+            "static/images/example.png",
+        )
 
     def test_quiz_lifecycle(self):
         quiz_path = os.path.join(self.tmpdir, "chapter1_quiz.csv")

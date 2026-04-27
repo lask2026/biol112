@@ -2,3 +2,5 @@ __pycache__/
 *.py[cod]
 flask_session/
 .pytest_cache/
+.test_tmp/
+biol112_test_*/

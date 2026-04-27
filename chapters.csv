@@ -1,4 +1,8 @@
 exam_id,exam_title,chapter_id,chapter_title,order,quiz_file
+Exam 1,Exam 1,Chapter 22,Chapter 22,1,chapter22_questions.csv
+Exam 1,Exam 1,Chapter 23,Chapter 23,2,chapter23_questions.csv
+Exam 1,Exam 1,Chapter 24,Chapter 24,3,chapter24_questions.csv
+Exam 1,Exam 1,Chapter 25,Chapter 25,4,chapter25_questions.csv
 Exam 2,Exam 2 Test 2/26/2026,Chapter 26,Bacteria & Archaea,1,chapter26_questions.csv
 Exam 2,Exam 2 Test 2/26/2026,Chapter 27,Protists,2,chapter27_questions.csv
 Exam 2,Exam 2 Test 2/26/2026,Chapter 28,Green Algae & Land Plants,3,chapter28_questions.csv

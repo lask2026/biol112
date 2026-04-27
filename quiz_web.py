@@ -327,7 +327,13 @@ def load_questions_from_file(path: str) -> dict:
             continue
 
         alternatives = [correct_answer] + [o for o in options if o != correct_answer]
-        image_val = row.get("Image", None) if "Image" in df.columns else None
+        image_col = None
+        if "Image" in df.columns:
+            image_col = "Image"
+        elif "Image Link" in df.columns:
+            image_col = "Image Link"
+
+        image_val = row.get(image_col, None) if image_col else None
         image = None
         if pd.notna(image_val):
             image_s = str(image_val).strip()
